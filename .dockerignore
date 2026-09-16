@@ -1,0 +1,9 @@
+# Gizli çevre değişkenlerini ve yerel çalışma çıktılarını image'e ekleme.
+.env
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+*.db
+data/

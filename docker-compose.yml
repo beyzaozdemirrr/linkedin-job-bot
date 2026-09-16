@@ -1,0 +1,14 @@
+services:
+  job-bot:
+    build: .
+    env_file:
+      - .env
+    environment:
+      # SQLite dosyasını kalıcı volume içinde sakla.
+      DATABASE_PATH: /app/data/seen_jobs.db
+    volumes:
+      - seen_jobs_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  seen_jobs_data:
