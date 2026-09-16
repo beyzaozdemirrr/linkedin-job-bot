@@ -1,51 +1,86 @@
-# LinkedIn → Telegram İş İlanı Botu
+# LinkedIn to Telegram - Akıllı İş İlanı Avcısı
 
-Türkiye'deki güncel remote veya hibrit yazılım iş ilanlarını takip edip CV'nizle eşleşenleri Telegram'a gönderen otomatik bildirim botu.
+Türkiye'deki Remote ve Hybrid yazılım fırsatlarını takip etmek için geliştirilmiş, Junior/Mid seviyeye odaklı otomatik bir bildirim botudur. LinkedIn üzerindeki ilanlar arasından CV'nizle uyuşan ve Senior/Lead süzgecinden geçen yeni fırsatları 15 dakikada bir doğrudan Telegram kanalınıza iletir.
 
-Bot, LinkedIn'in herkese açık iş arama uç noktasında 30 hedef unvanı (Software Engineer, .NET Developer, React Developer, Kotlin Developer vb.) son 24 saatte yayımlanan remote/hybrid ilanlar için ayrı ayrı arar. İlanları teknoloji anahtar kelimelerine göre filtreler, daha önce iletilenleri SQLite ile eler ve uygun yeni ilanları 15 dakikada bir Telegram'a gönderir.
+## Projenin Amacı ve Çalışma Mantığı
 
-## Özellikler
+Manuel olarak sürekli LinkedIn'de arama yapma ihtiyacını ortadan kaldırır:
 
-- Remote ve hibrit ilanları LinkedIn üzerinden takip eder.
-- React, Python, Docker, SQL, backend ve frontend gibi CV anahtar kelimeleriyle eşleştirir.
-- Senior, lead, staff, manager ve yüksek deneyim yılı taleplerini hariç tutar; yalnızca Junior, Associate, Entry Level, Intern vb. açıkça belirtilmiş seviyeleri kabul eder.
-- Aynı ilanı tekrar bildirmemek için SQLite kullanır.
-- Telegram'a HTML biçiminde pozisyon, şirket, konum, eşleşmeler ve başvuru bağlantısı gönderir.
-- Docker Compose ile çalışır; ilan geçmişi konteyner yeniden başlasa da korunur.
+1. **Geniş Ağ Tarar:** 30 farklı iş başlığını (`Software Engineer`, `Full Stack Developer`, `.NET`, `React`, `Kotlin Developer` vb.) döngüsel olarak tarar.
+2. **Süzgeç Uygular:**
+* `Senior`, `Lead`, `Manager`, `5+ years` gibi tecrübe şartı yüksek ilanları eler.
+* `Junior`, `Entry Level`, `Associate`, `New Grad` ve stajyer seviyesindeki ilanları seçer.
+* İlan metninde belirlediğiniz teknolojilerin (`MERN`, `React`, `Node.js`, `ASP.NET Core`, `Docker`, `SQL`, `Kotlin` vb.) geçip geçmediğini doğrular.
 
-## Kurulum
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
+3. **Duplicate Kayıt Engeller:** Daha önce bildirdiği ilanları SQLite veritabanında saklar, aynı bildirimi tekrar göndermez.
+
+## Mimari ve Teknoloji Yığını
+
+* **Python 3.11 & BeautifulSoup4:** LinkedIn public sayfalarından hafif HTML parsing işlemleri.
+* **SQLite:** Duplicate bildirimleri engellemek için hafif veri saklama katmanı.
+* **APScheduler:** 15 dakikalık periyotlarla tarama döngüsünü yöneten zamanlayıcı.
+* **Telegram Bot API:** Uygun ilanları başlık, şirket, konum ve başvuru linkiyle ileten entegrasyon.
+* **Docker & Docker Compose:** İzolasyon içinde 7/24 kesintisiz çalışma ve `volume` desteğiyle kalıcı veri (persistence) yönetimi.
+
+## Proje Yapısı
+
+```text
+├── main.py              # APScheduler ile 15 dk'lık zamanlayıcı ve ana iş akışı
+├── linkedin_scraper.py  # 30 farklı unvanı sırayla tarayan LinkedIn scraper'ı
+├── filters.py           # Seviye (Junior/Mid) ve teknoloji eşleşme mantığı
+├── db.py                # SQLite veri kayıt ve duplicate kontrol katmanı
+├── telegram_notifier.py # Telegram HTML formatlı mesaj gönderici
+├── config.py            # Arama parametreleri, anahtar kelimeler ve .env konfigürasyonu
+├── Dockerfile           # Non-root (appuser) güvenlikli Docker yapılandırması
+└── docker-compose.yml   # Volume ve container orkestrasyonu
+
 ```
 
-`.env` içindeki `TELEGRAM_TOKEN` ile `CHAT_ID` (veya `TELEGRAM_CHAT_ID`) değerlerini doldurun. Ardından:
+## Hızlı Kurulum
+
+### 1. Yerel Ortamda Çalıştırma (Local)
+
+```powershell
+# Sanal ortam oluşturun ve aktif edin
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1   # Linux/Mac için: source .venv/bin/activate
+
+# Bağımlılıkları yükleyin
+pip install -r requirements.txt
+
+# Çevre değişkenlerini hazırlayın
+Copy-Item .env.example .env     # Linux/Mac için: cp .env.example .env
+
+```
+
+`.env` dosyasının içine kendi **Telegram Bot Token** ve **Chat ID** bilgilerinizi girin, ardından başlatın:
 
 ```powershell
 python main.py
+
 ```
 
-Bot başlangıçta hemen bir kontrol yapar, sonra 15 dakikada bir çalışır. Başarıyla Telegram'a iletilen ilan kimlikleri, yerel çalıştırmada `seen_jobs.db` içindeki `seen_jobs` tablosuna kaydedilir.
+### 2. Docker ile Çalıştırma
 
-## Docker ile çalıştırma
-
-`.env` dosyasını image'e kopyalamadan, yalnızca konteynere çalışma anında aktararak başlatın:
+Hassas bilgilerinizi (`.env`) image içine gömmeden çalıştırmak için:
 
 ```powershell
 docker compose up --build -d
+
 ```
 
-`seen_jobs_data` named volume'u, `/app/data/seen_jobs.db` dosyasını konteyner yeniden başlatılsa da korur. Günlükleri görmek için `docker compose logs -f job-bot` kullanın.
+`seen_jobs_data` volume'u sayesinde konteyner silinse veya baştan kurulsa bile taranan ilan geçmişiniz (`seen_jobs.db`) korunur.
 
-## Dosyalar
+**Logları canlı izlemek için:**
 
-- `config.py`: LinkedIn araması, anahtar kelimeler ve ortam değişkenleri
-- `linkedin_scraper.py`: Herkese açık LinkedIn sonuç kartlarını ayrıştırır
-- `filters.py`: Hariç tutma ve CV eşleşme kuralı
-- `database.py`: SQLite tekrar engelleme katmanı
-- `telegram_notifier.py`: Telegram HTML mesajı
-- `main.py`: APScheduler iş akışı
-- `Dockerfile` ve `docker-compose.yml`: Konteynerleştirilmiş, kalıcı veri depolamalı çalışma ortamı
+```powershell
+docker compose logs -f job-bot
+
+```
+
+## Güvenlik
+
+* `.env` dosyası ve `.db` veritabanı `.gitignore` ile korumaya alınmıştır; gizli anahtarlar Git'e dahil edilmez.
+* Docker konteyneri root yetkisi yerine kısıtlı `appuser` (UID 10001) ile çalışır.
+* Örnek yapı `.env.example` dosyası üzerinden sağlanır.
