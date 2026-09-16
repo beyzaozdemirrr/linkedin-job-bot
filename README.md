@@ -2,7 +2,7 @@
 
 Türkiye'deki güncel remote veya hibrit yazılım iş ilanlarını takip edip CV'nizle eşleşenleri Telegram'a gönderen otomatik bildirim botu.
 
-Bot, LinkedIn'in herkese açık iş arama uç noktasından son 24 saatte yayımlanan `Software Engineer` ilanlarını alır. İlanları teknoloji anahtar kelimelerine göre filtreler, daha önce iletilenleri SQLite ile eler ve uygun yeni ilanları 15 dakikada bir Telegram'a gönderir.
+Bot, LinkedIn'in herkese açık iş arama uç noktasında 30 hedef unvanı (Software Engineer, .NET Developer, React Developer, Kotlin Developer vb.) son 24 saatte yayımlanan remote/hybrid ilanlar için ayrı ayrı arar. İlanları teknoloji anahtar kelimelerine göre filtreler, daha önce iletilenleri SQLite ile eler ve uygun yeni ilanları 15 dakikada bir Telegram'a gönderir.
 
 ## Özellikler
 

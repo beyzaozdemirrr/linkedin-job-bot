@@ -1,12 +1,29 @@
 """LinkedIn herkese açık iş arama uç noktasından ilan alma işlemleri."""
 
 from dataclasses import dataclass
+import logging
 import re
 
 import requests
 from bs4 import BeautifulSoup
 
 from config import LINKEDIN_SEARCH_URL, REQUEST_TIMEOUT_SECONDS, SEARCH_PARAMS
+
+logger = logging.getLogger(__name__)
+
+SEARCH_TITLES = [
+    "Software Engineer", "Software Developer", "Yazılım Uzmanı",
+    "Junior Software Engineer", "Associate Software Engineer", "Software Development Engineer",
+    "Application Developer", "Uygulama Geliştirici",
+    "Full Stack Developer", "Full Stack Engineer", "Fullstack Software Developer",
+    "Web Developer", "Web Geliştirici", "MERN Stack Developer",
+    "Backend Developer", "Backend Engineer", "Node.js Developer",
+    ".NET Developer", "ASP.NET Developer", "C# Developer", "API Developer",
+    "Frontend Developer", "Frontend Engineer", "React Developer",
+    "JavaScript Developer", "TypeScript Developer",
+    "Mobile Developer", "Android Developer", "Kotlin Developer",
+    "AI Software Engineer",
+]
 
 HEADERS = {
     "User-Agent": (
@@ -39,21 +56,14 @@ def _job_id(card) -> str | None:
         return match.group(1)
 
     link = card.select_one("a.base-card__full-link")
-    match = re.search(r"currentJobId=(\d+)|/view/(\d+)", link.get("href", "") if link else "")
+    href = link.get("href", "") if link else ""
+    match = re.search(r"currentJobId=(\d+)|/view/(\d+)", href)
     return next((part for part in match.groups() if part), None) if match else None
 
 
-def fetch_jobs() -> list[Job]:
-    """Arama sonuçlarının ilk sayfasını getirir; ağ/HTTP hatalarında istisna yükseltir."""
-    response = requests.get(
-        LINKEDIN_SEARCH_URL,
-        params={**SEARCH_PARAMS, "start": 0},
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
+def _parse_jobs(page_html: str) -> list[Job]:
+    """LinkedIn sonuç HTML'inden geçerli iş kartlarını ayrıştırır."""
+    soup = BeautifulSoup(page_html, "html.parser")
     jobs: list[Job] = []
     for card in soup.select("li div.base-card"):
         job_id = _job_id(card)
@@ -71,3 +81,26 @@ def fetch_jobs() -> list[Job]:
             )
         )
     return jobs
+
+
+def fetch_jobs() -> list[Job]:
+    """Her hedef unvanı sırayla arar, sonuçları birleştirir ve tekrarları kaldırır."""
+    jobs_by_id: dict[str, Job] = {}
+
+    for search_title in SEARCH_TITLES:
+        try:
+            response = requests.get(
+                LINKEDIN_SEARCH_URL,
+                params={**SEARCH_PARAMS, "keywords": search_title, "start": 0},
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+        except requests.RequestException:
+            logger.exception("LinkedIn araması başarısız: %s", search_title)
+            continue
+
+        for job in _parse_jobs(response.text):
+            jobs_by_id.setdefault(job.job_id, job)
+
+    return list(jobs_by_id.values())
