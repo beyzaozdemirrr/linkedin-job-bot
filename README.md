@@ -1,6 +1,17 @@
 # LinkedIn → Telegram İş İlanı Botu
 
-Bu bot, LinkedIn'in herkese açık iş arama uç noktasında Türkiye'deki son 24 saatlik remote/hybrid `Software Engineer` ilanlarını kontrol eder. CV anahtar kelimeleriyle eşleşen yeni ilanları Telegram'a gönderir ve tekrarları SQLite'ta engeller.
+Türkiye'deki güncel remote veya hibrit yazılım iş ilanlarını takip edip CV'nizle eşleşenleri Telegram'a gönderen otomatik bildirim botu.
+
+Bot, LinkedIn'in herkese açık iş arama uç noktasından son 24 saatte yayımlanan `Software Engineer` ilanlarını alır. İlanları teknoloji anahtar kelimelerine göre filtreler, daha önce iletilenleri SQLite ile eler ve uygun yeni ilanları 15 dakikada bir Telegram'a gönderir.
+
+## Özellikler
+
+- Remote ve hibrit ilanları LinkedIn üzerinden takip eder.
+- React, Python, Docker, SQL, backend ve frontend gibi CV anahtar kelimeleriyle eşleştirir.
+- Senior, manager, PHP ve Flutter gibi istenmeyen anahtar kelimeleri hariç tutar.
+- Aynı ilanı tekrar bildirmemek için SQLite kullanır.
+- Telegram'a HTML biçiminde pozisyon, şirket, konum, eşleşmeler ve başvuru bağlantısı gönderir.
+- Docker Compose ile çalışır; ilan geçmişi konteyner yeniden başlasa da korunur.
 
 ## Kurulum
 
@@ -17,7 +28,7 @@ Copy-Item .env.example .env
 python main.py
 ```
 
-Bot başlangıçta hemen bir kontrol yapar, sonra 15 dakikada bir çalışır. Başarıyla Telegram'a iletilen ilan kimlikleri `jobs.db` içindeki `seen_jobs` tablosuna kaydedilir.
+Bot başlangıçta hemen bir kontrol yapar, sonra 15 dakikada bir çalışır. Başarıyla Telegram'a iletilen ilan kimlikleri, yerel çalıştırmada `seen_jobs.db` içindeki `seen_jobs` tablosuna kaydedilir.
 
 ## Docker ile çalıştırma
 
@@ -37,3 +48,4 @@ docker compose up --build -d
 - `database.py`: SQLite tekrar engelleme katmanı
 - `telegram_notifier.py`: Telegram HTML mesajı
 - `main.py`: APScheduler iş akışı
+- `Dockerfile` ve `docker-compose.yml`: Konteynerleştirilmiş, kalıcı veri depolamalı çalışma ortamı
