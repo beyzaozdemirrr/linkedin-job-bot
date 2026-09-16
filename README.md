@@ -15,7 +15,7 @@ Manuel olarak sürekli LinkedIn'de arama yapma ihtiyacını ortadan kaldırır:
 
 3. **Duplicate Kayıt Engeller:** Daha önce bildirdiği ilanları SQLite veritabanında saklar, aynı bildirimi tekrar göndermez.
 
-## Mimari ve Teknoloji Yığını
+## Mimari ve Tech Stack
 
 * **Python 3.11 & BeautifulSoup4:** LinkedIn public sayfalarından hafif HTML parsing işlemleri.
 * **SQLite:** Duplicate bildirimleri engellemek için hafif veri saklama katmanı.
