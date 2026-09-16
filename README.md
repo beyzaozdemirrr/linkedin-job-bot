@@ -8,7 +8,7 @@ Bot, LinkedIn'in herkese açık iş arama uç noktasında 30 hedef unvanı (Soft
 
 - Remote ve hibrit ilanları LinkedIn üzerinden takip eder.
 - React, Python, Docker, SQL, backend ve frontend gibi CV anahtar kelimeleriyle eşleştirir.
-- Senior, manager, PHP ve Flutter gibi istenmeyen anahtar kelimeleri hariç tutar.
+- Senior, lead, staff, manager ve yüksek deneyim yılı taleplerini hariç tutar; yalnızca Junior, Associate, Entry Level, Intern vb. açıkça belirtilmiş seviyeleri kabul eder.
 - Aynı ilanı tekrar bildirmemek için SQLite kullanır.
 - Telegram'a HTML biçiminde pozisyon, şirket, konum, eşleşmeler ve başvuru bağlantısı gönderir.
 - Docker Compose ile çalışır; ilan geçmişi konteyner yeniden başlasa da korunur.

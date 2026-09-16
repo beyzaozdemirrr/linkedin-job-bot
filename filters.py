@@ -1,32 +1,24 @@
 """İlanların CV ile uyumluluğunu kontrol eden filtreler."""
 
 MUST_HAVE_KEYWORDS = [
-    # Teknolojiler ve uzmanlık alanları
-    "react", "node", "node.js", "express", "mongodb", "asp.net", "c#",
-    ".net", "kotlin", "python", "sql", "docker", "mern", "frontend",
-    "backend", "full stack", "fullstack", "javascript", "typescript", "api",
-    "web", "mobile", "android", "ai",
-    # Hedef iş unvanları
-    "software engineer", "software developer", "yazılım uzmanı",
-    "junior software engineer", "associate software engineer",
-    "software development engineer", "application developer", "uygulama geliştirici",
-    "full stack developer", "full stack engineer", "fullstack software developer",
-    "web developer", "web geliştirici", "mern stack developer", "backend developer",
-    "backend engineer", "node.js developer", ".net developer", "asp.net developer",
-    "c# developer", "api developer", "frontend developer", "frontend engineer",
-    "react developer", "javascript developer", "typescript developer",
-    "mobile developer", "android developer", "kotlin developer", "ai software engineer",
-    "developer",
+    "react", "node", "express", "mongodb", "asp.net", ".net", "c#",
+    "docker", "sql", "kotlin", "javascript", "typescript", "full stack",
+    "backend", "frontend", "software developer", "web developer", "mobile developer",
 ]
 
 EXCLUDE_KEYWORDS = [
-    "senior", "lead", "manager", "director", "architect", "php",
-    "wordpress", "ios", "swift", "flutter",
+    "Senior", "Sr.", "Lead", "Principal", "Architect", "Staff", "Manager",
+    "Head of", "Director", "5+ years", "7+ years", "10+ years",
+]
+
+ALLOWED_LEVELS = [
+    "Junior", "Entry Level", "Associate", "Mid-Level", "Intermediate",
+    "New Grad", "Graduate", "Intern", "Stajyer",
 ]
 
 
 def matches_cv(title: str, description: str = "") -> tuple[bool, list[str]]:
-    """Başlık ve açıklamaya göre CV uyumluluğunu ve eşleşmeleri döndürür."""
+    """Teknoloji/unvan ve hedef deneyim seviyesiyle CV uyumunu döndürür."""
     searchable_text = f"{title or ''} {description or ''}".casefold()
 
     if any(keyword.casefold() in searchable_text for keyword in EXCLUDE_KEYWORDS):
@@ -36,4 +28,10 @@ def matches_cv(title: str, description: str = "") -> tuple[bool, list[str]]:
         keyword for keyword in MUST_HAVE_KEYWORDS
         if keyword.casefold() in searchable_text
     ]
-    return (True, matched_keywords) if matched_keywords else (False, [])
+    if not matched_keywords:
+        return False, []
+
+    if not any(level.casefold() in searchable_text for level in ALLOWED_LEVELS):
+        return False, []
+
+    return True, matched_keywords
