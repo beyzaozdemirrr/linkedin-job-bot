@@ -48,8 +48,8 @@ def start_health_check_server() -> threading.Thread:
     return thread
 
 
-def check_new_jobs() -> None:
-    """Yeni, uygun ilanları bulur, iletir ve yalnızca başarılı iletimleri kaydeder."""
+def fetch_and_process_jobs() -> None:
+    """İlanları alır, filtreler, yeni eşleşmeleri iletir ve kaydeder."""
     try:
         jobs = fetch_jobs()
         logger.info("LinkedIn'den %d ilan alındı.", len(jobs))
@@ -57,14 +57,16 @@ def check_new_jobs() -> None:
         logger.exception("LinkedIn ilanları alınamadı.")
         return
 
+    filtered_count = 0
     sent_count = 0
     for job in jobs:
         try:
-            if is_seen(job.job_id):
-                continue
-
             is_match, matched_keywords = matches_cv(job.title, job.card_text)
             if not is_match:
+                continue
+            filtered_count += 1
+
+            if is_seen(job.job_id):
                 continue
 
             send_job(job, matched_keywords)
@@ -74,7 +76,12 @@ def check_new_jobs() -> None:
         except Exception:
             logger.exception("İlan işlenemedi: %s (%s)", job.title, job.job_id)
 
-    logger.info("Tur tamamlandı: %d uygun yeni ilan bildirildi.", sent_count)
+    logger.info(
+        "Tur tamamlandı: toplam %d ilan, filtreyi geçen %d ilan, Telegram'a gönderilen %d ilan.",
+        len(jobs),
+        filtered_count,
+        sent_count,
+    )
 
 
 def main() -> None:
@@ -84,7 +91,7 @@ def main() -> None:
 
     scheduler = BlockingScheduler(timezone="Europe/Istanbul")
     scheduler.add_job(
-        check_new_jobs,
+        fetch_and_process_jobs,
         trigger="interval",
         minutes=15,
         id="linkedin_job_checker",
@@ -92,7 +99,7 @@ def main() -> None:
         coalesce=True,
     )
     logger.info("Bot başlatıldı; 15 dakikada bir kontrol yapılacak.")
-    check_new_jobs()  # Başlangıçta ilk kontrolü hemen yap.
+    fetch_and_process_jobs()  # Scheduler başlamadan ilk kontrolü hemen yap.
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

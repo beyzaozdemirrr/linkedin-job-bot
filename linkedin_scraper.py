@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 import logging
+import random
 import re
+import time
 
 import requests
 from bs4 import BeautifulSoup
@@ -28,9 +30,16 @@ SEARCH_TITLES = [
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
     ),
     "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+    "Referer": "https://www.linkedin.com/jobs/search/",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 
@@ -87,7 +96,10 @@ def fetch_jobs() -> list[Job]:
     """Her hedef unvanı sırayla arar, sonuçları birleştirir ve tekrarları kaldırır."""
     jobs_by_id: dict[str, Job] = {}
 
-    for search_title in SEARCH_TITLES:
+    for index, search_title in enumerate(SEARCH_TITLES):
+        if index > 0:
+            time.sleep(random.uniform(2, 5))
+
         try:
             response = requests.get(
                 LINKEDIN_SEARCH_URL,
@@ -96,11 +108,20 @@ def fetch_jobs() -> list[Job]:
                 timeout=REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
+        except requests.exceptions.HTTPError as error:
+            status_code = error.response.status_code if error.response is not None else None
+            if status_code == 429:
+                logger.warning(
+                    "LinkedIn rate limit (429) uygulandı: %s. 15 saniye bekleniyor.",
+                    search_title,
+                )
+                time.sleep(15)
+                continue
+            logger.exception("LinkedIn HTTP hatası: %s", search_title)
         except requests.RequestException:
             logger.exception("LinkedIn araması başarısız: %s", search_title)
-            continue
-
-        for job in _parse_jobs(response.text):
-            jobs_by_id.setdefault(job.job_id, job)
+        else:
+            for job in _parse_jobs(response.text):
+                jobs_by_id.setdefault(job.job_id, job)
 
     return list(jobs_by_id.values())
