@@ -1,6 +1,9 @@
 """LinkedIn iş ilanı bildirim botu giriş noktası."""
 
 import logging
+import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -14,6 +17,35 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Render'ın servis erişilebilirlik denetimleri için basit HTTP yanıtı."""
+
+    def do_GET(self) -> None:  # noqa: N802 - HTTP metodunun standart adı
+        response_body = b"Bot is alive"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(response_body)))
+        self.end_headers()
+        self.wfile.write(response_body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        """Her health check isteğinin standart hata çıktısını doldurmasını önler."""
+
+
+def start_health_check_server() -> threading.Thread:
+    """HTTP health check sunucusunu ana scheduler'ı engellemeden başlatır."""
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    thread = threading.Thread(
+        target=server.serve_forever,
+        name="health-check-server",
+        daemon=True,
+    )
+    thread.start()
+    logger.info("Health check sunucusu %d portunda başlatıldı.", port)
+    return thread
 
 
 def check_new_jobs() -> None:
@@ -48,6 +80,7 @@ def check_new_jobs() -> None:
 def main() -> None:
     initialize_database()
     validate_telegram_config()
+    start_health_check_server()
 
     scheduler = BlockingScheduler(timezone="Europe/Istanbul")
     scheduler.add_job(
